@@ -1,6 +1,6 @@
 # Leng cmake build script.
 cmake_minimum_required(VERSION 2.8)
-project(SdlTemplate)
+project(SmallEcoDestroyed)
 
 # Check the build type
 if (CMAKE_BUILD_TYPE STREQUAL "")
@@ -17,10 +17,8 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL Emscripten)
 endif()
 
 # Output paths.
-set(CMAKE_DEBUG_POSTFIX "_d")
-
 set(CMAKE_INSTALL_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/dist")
-set(SdlTemplate_DATA_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/dist/data")
+set(SmallEcoDestroyed_DATA_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/dist/data")
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/;${CMAKE_MODULE_PATH}")
 
 # Turn warnings and use C++ 2011.
@@ -44,9 +42,10 @@ include(${CMAKE_ROOT}/Modules/CheckFunctionExists.cmake)
 include(${CMAKE_ROOT}/Modules/CheckLibraryExists.cmake)
 
 # Set output dir.
-set(EXECUTABLE_OUTPUT_PATH "${SdlTemplate_BINARY_DIR}/dist")
-set(LIBRARY_OUTPUT_PATH "${SdlTemplate_BINARY_DIR}/dist")
+set(EXECUTABLE_OUTPUT_PATH "${SmallEcoDestroyed_BINARY_DIR}/dist")
+set(LIBRARY_OUTPUT_PATH "${SmallEcoDestroyed_BINARY_DIR}/dist")
 
+set(LIVE_CODING_SUPPORT True)
 
 # Use pkg-config.
 find_package(PkgConfig)
@@ -57,8 +56,10 @@ if(ON_EMSCRIPTEN)
 
     set(SDL2_LIBRARIES)
     set(CMAKE_EXECUTABLE_SUFFIX .html)
-    set(SdlTemplate_DEP_LIBS ${SDL2_LIBRARIES} ${SdlTemplate_DEP_LIBS})
+    set(SmallEcoDestroyed_DEP_LIBS ${SDL2_LIBRARIES} ${SmallEcoDestroyed_DEP_LIBS})
     set(ASSET_FLAGS "--preload-file ${CMAKE_SOURCE_DIR}/assets@assets")
+
+	set(LIVE_CODING_SUPPORT False)
 
 else()
     # For VisualStudio or mingw in Window
@@ -74,14 +75,15 @@ else()
     find_library(SDL2_LIBRARY NAMES SDL2-2.0 SDL2 PATHS ${SDL2_LIBRARY_PATH})
     find_library(SDL2_IMAGE_LIBRARY NAMES SDL2_image-2.0 SDL2_image PATHS ${SDL2_LIBRARY_PATH})
     if(WIN32)
-	find_library(SDL2_MAIN_LIBRARY NAMES SDL2main PATHS ${SDL2_LIBRARY_PATH})
+		find_library(SDL2_MAIN_LIBRARY NAMES SDL2main PATHS ${SDL2_LIBRARY_PATH})
     else()
-	set(SDL2_MAIN_LIBRARY "")
+		set(SDL2_MAIN_LIBRARY "")
+		set(SmallEcoDestroyed_DEP_LIBS "dl")
     endif()
 
-    set(SdlTemplate_DEP_LIBS ${SdlTemplate_DEP_LIBS} ${SDL2_MAIN_LIBRARY} ${SDL2_LIBRARY} ${SDL2_IMAGE_LIBRARY})
+    set(SmallEcoDestroyed_DEP_LIBS ${SmallEcoDestroyed_DEP_LIBS} ${SDL2_MAIN_LIBRARY} ${SDL2_LIBRARY} ${SDL2_IMAGE_LIBRARY})
     if(MINGW)
-        set(SdlTemplate_DEP_LIBS mingw32 ${SdlTemplate_DEP_LIBS})
+        set(SmallEcoDestroyed_DEP_LIBS mingw32 ${SmallEcoDestroyed_DEP_LIBS})
 	add_definitions(-D__NO_INLINE__)
     endif()
 
