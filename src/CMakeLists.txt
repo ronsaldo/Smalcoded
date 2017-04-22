@@ -1,9 +1,13 @@
 set(SmallEcoDestroyedGameLogic_SOURCES
+    ControllerState.hpp
+    Float.hpp
     GameInterface.hpp
     GameLogic.cpp
     GameLogic.hpp
+    MemoryZone.hpp
     Renderer.cpp
     Renderer.hpp
+    Vector2.hpp
 )
 
 set(SmallEcoDestroyed_SOURCES

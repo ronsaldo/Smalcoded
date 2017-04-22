@@ -4,6 +4,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <assert.h>
+#include <string.h>
 
 class MemoryZone
 {
@@ -20,6 +21,7 @@ public:
         delete [] data;
         data = new uint8_t[newSize];
         size = newSize;
+        memset(data, 0, newSize);
     }
 
     uint8_t *allocateBytes(size_t byteCount)

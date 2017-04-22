@@ -2,14 +2,16 @@
 #define SMALL_ECO_DESTROYED_GAME_INTERFACE_HPP
 
 #include "MemoryZone.hpp"
+#include "ControllerState.hpp"
+#include "Framebuffer.hpp"
 
 struct GameInterface
 {
     virtual void setPersistentMemory(MemoryZone *zone) = 0;
     virtual void setTransientMemory(MemoryZone *zone) = 0;
 
-    virtual void update(float delta) = 0;
-    virtual void render(int width, int height, uint8_t *framebuffer, int pitch) = 0;
+    virtual void update(float delta, const ControllerState &controllerState) = 0;
+    virtual void render(const Framebuffer &framebuffer) = 0;
 };
 
 typedef GameInterface *(*GetGameInterfaceFunction)();
