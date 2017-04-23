@@ -6,7 +6,10 @@
 #include "Vector2.hpp"
 #include "Rectangle.hpp"
 #include "Image.hpp"
+#include "Box2.hpp"
 #include <assert.h>
+
+Box2 getScreenWorldBoundingBox();
 
 enum class TileType: uint8_t
 {
@@ -23,6 +26,43 @@ enum class TileType: uint8_t
 
     Count,
 };
+
+enum class TileOccupant : uint8_t
+{
+    None = 0,
+
+    // Nasty stuff
+    Turret,
+
+    // Items
+    Apple,
+    Meat,
+    MilitaryMeal,
+    Medkit,
+
+    Bullet,
+    TripleBullet,
+    DemolitionBullet,
+    TripleDemolitionBullet,
+
+    Count,
+
+    ItemBegin = Apple,
+    ItemEnd = TripleDemolitionBullet,
+
+    StructureBegin = Turret,
+    StructureEnd = Turret,
+};
+
+inline bool isTileOccupantAnItem(TileOccupant occupant)
+{
+    return TileOccupant::ItemBegin <= occupant && occupant <= TileOccupant::ItemEnd;
+}
+
+inline bool isTileOccupantAStructure(TileOccupant occupant)
+{
+    return TileOccupant::StructureBegin <= occupant && occupant <= TileOccupant::StructureEnd;
+}
 
 namespace TileTypeMask
 {
@@ -42,8 +82,14 @@ enum Bits
     AnyWater = DeepWater | Water | ShallowWater,
     OceanWater = DeepWater | Water,
     AnyGround = Ice | Sand | Grass | Forest | Earth,
+    NonWater = AnyGround | Rock,
 };
 };
+
+inline bool isPassableOccupant(TileOccupant occupant)
+{
+    return !isTileOccupantAStructure(occupant);
+}
 
 inline bool isTileTypeInSet(TileType type, uint32_t set)
 {
@@ -113,6 +159,29 @@ struct ImageCoordinate
     int index;
 };
 
+union TileOccupantState
+{
+    struct
+    {
+        uint8_t renderState;
+        uint8_t health;
+    } generic;
+
+    struct
+    {
+        uint8_t renderState;
+        uint8_t health;
+        uint16_t milliseconds;
+        uint16_t cooldown;
+    } turret;
+
+    void setDefault(TileOccupant occupant)
+    {
+        generic.renderState = 0;
+        generic.health = 100;
+    }
+};
+
 struct TileMap
 {
     typedef ImageCoordinate<TileType> Coordinate;
@@ -137,7 +206,31 @@ struct TileMap
     int animationVariant;
     TileType tiles[Width*Height];
     uint32_t tileRandom[Width*Height];
+    TileOccupant occupants[Width*Height];
+    TileOccupantState occupantStates[Width*Height];
 
+    template<typename FT>
+    void screenTilesDo(const FT &f)
+    {
+        auto screenBox = getScreenWorldBoundingBox();
+        auto minPosition = screenBox.min.floor();
+        auto maxPosition = screenBox.max.floor();
+
+        int minX = minPosition.x;
+        int minY = minPosition.y;
+        int maxX = maxPosition.x;
+        int maxY = maxPosition.y;
+
+        for(int y = minY; y <= maxY; ++y)
+        {
+            auto tileRow = floorModule(y, Height);
+            for(int x = minX; x <= maxX; ++x)
+            {
+                auto tx = floorModule(x, Width);
+                f(tileRow, tx);
+            }
+        }
+    }
 };
 
 template<int W, int H>

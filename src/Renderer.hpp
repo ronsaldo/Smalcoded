@@ -3,6 +3,10 @@
 
 #include <stdint.h>
 #include "Framebuffer.hpp"
+#include "Box2.hpp"
+
+static constexpr int ScreenWidth = 640;
+static constexpr int ScreenHeight = 480;
 
 inline uint32_t encodeColor(int r, int g, int b, int a)
 {
@@ -25,5 +29,8 @@ inline uint32_t convertRGBAHex(uint32_t color)
 }
 
 void render(const Framebuffer &framebuffer);
+
+Box2 getScreenBoundingBox();
+Box2 getScreenWorldBoundingBox();
 
 #endif //SMALL_ECO_DESTROYED_RENDERER_HPP

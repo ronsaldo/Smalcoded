@@ -34,4 +34,14 @@ inline float floorModule(float x, float d)
     return x - floor(x/d)*d;
 }
 
+inline int signOrZero(float x)
+{
+    if(x > 0)
+        return 1;
+    else if(x < -0)
+        return -1;
+    return 0;
+}
+#define arrayLength(array) sizeof(array) / sizeof((array)[0])
+
 #endif //SMALL_ECO_DESTROYED_FLOAT_HPP

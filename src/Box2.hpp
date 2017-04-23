@@ -76,6 +76,36 @@ public:
         return fromCenterAndExtent(center(), extent() - amount);
     }
 
+    bool containsPoint(const Vector2 &point) const
+    {
+        return
+            min.x <= point.x && point.x <= max.x &&
+            min.y <= point.y && point.y <= max.y;
+    }
+
+    template<typename FT>
+    void segmentsDo(const FT &f)
+    {
+        auto bl = bottomLeft();
+        auto br = bottomRight();
+        auto tr = topRight();
+        auto tl = topLeft();
+
+        f(bl, br);
+        f(br, tr);
+        f(tr, tl);
+        f(tl, bl);
+    }
+
+    bool isIntersectedByLine(const Vector2 &start, const Vector2 &end) const
+    {
+        auto expectedOrientation = orient2D(start, end, bottomLeft());
+        return expectedOrientation == 0 ||
+            expectedOrientation != orient2D(start, end, bottomRight()) ||
+            expectedOrientation != orient2D(start, end, topRight()) ||
+            expectedOrientation != orient2D(start, end, topLeft());
+    }
+    
     Vector2 min, max;
 };
 

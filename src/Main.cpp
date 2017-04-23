@@ -5,9 +5,6 @@
 #include "ControllerState.hpp"
 #include <algorithm>
 
-static constexpr size_t PersistentMemorySize = 64*1024*1024;
-static constexpr size_t TransientMemorySize = 32*1024*1024;
-
 #define GAME_TITLE "Small eco destroyed world"
 
 #ifdef __EMSCRIPTEN__
@@ -182,7 +179,6 @@ static void onKeyEvent(const SDL_KeyboardEvent &event, bool isDown)
     case SDLK_TAB:
         keyboardControllerState.setButton(ControllerButton::Select, isDown);
         break;
-#ifdef USE_LIVE_CODING
     case SDLK_r:
         if(isDown)
         {
@@ -190,6 +186,7 @@ static void onKeyEvent(const SDL_KeyboardEvent &event, bool isDown)
             transientMemory.reset();
         }
         break;
+#ifdef USE_LIVE_CODING
     case SDLK_F1:
         quitting = true;
         break;

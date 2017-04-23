@@ -32,6 +32,73 @@ static struct TileColors
     }
 } tileColorsClass;
 
+static float TileOccupantProbabilities[(int)TileOccupant::Count] = {
+    /* None */ 200,
+
+    // Nasty stuff
+    /*Turret*/ 1,
+
+    // Items
+    /* Apple */ 1,
+    /* Meat */ 1,
+    /* MilitaryMeal*/ 1,
+    /* Medkit */ 1,
+    /* Bullet */1,
+    /* TripleBullet */1,
+    /* DemolitionBullet */1,
+    /* TripleDemolitionBullet */1,
+};
+
+static const uint32_t TileOccupantPermittedTileMask[(int)TileOccupant::Count] = {
+    /* None */ ~0u,
+
+    // Nasty stuff
+    /*Turret*/ ~0u,
+
+    // Items
+    /* Apple */ TileTypeMask::Grass | TileTypeMask::Forest | TileTypeMask::Earth,
+    /* Meat */ TileTypeMask::AnyGround,
+    /* MilitaryMeal*/ ~0u,
+    /* Medkit */ TileTypeMask::Grass | TileTypeMask::Forest | TileTypeMask::Earth,
+    /* Bullet */~0u,
+    /* TripleBullet */~0u,
+    /* DemolitionBullet */~0u,
+    /* TripleDemolitionBullet */~0u,
+
+};
+
+static TileOccupant tileOccupantProbabilityDistribution[1<<16];
+
+static struct TileOccupantProbabilityComputer
+{
+    TileOccupantProbabilityComputer()
+    {
+        constexpr int TableSize = 1<<16;
+
+        int numberOfElements = int(TileOccupant::Count);
+        float probabilitySum = 0;
+        for(int i = 0; i < numberOfElements; ++i)
+            probabilitySum += TileOccupantProbabilities[i];
+
+        int destIndex = 0;
+        for(int i = 0; i < numberOfElements; ++i)
+        {
+            int elementCount = TableSize * TileOccupantProbabilities[i] / probabilitySum;
+            int nextIndex = destIndex + elementCount;
+            if(nextIndex > TableSize)
+                nextIndex = TableSize;
+
+            for(int d = destIndex; d < nextIndex; ++d)
+                tileOccupantProbabilityDistribution[d] = TileOccupant(i);
+            destIndex = nextIndex;
+        }
+
+        for(int d = destIndex; d < TableSize; ++d)
+            tileOccupantProbabilityDistribution[d] = TileOccupant::None;
+    }
+
+} tileOccupantProbabilityComputer;
+
 void TileMap::loadFromFile(const char *fileName)
 {
     Image image;
@@ -54,7 +121,12 @@ void TileMap::loadFromFile(const char *fileName)
             if(type == TileType::None)
                 printf("Unidentified color %08x\n", color);
             tiles[destIndex] = type;
-            tileRandom[destIndex] = global.random.next32();
+            auto random = tileRandom[destIndex] = global.random.next32();
+
+            auto tileOccupant = tileOccupantProbabilityDistribution[random&0xFFFF];
+            if(isTileTypeInSet(type, TileOccupantPermittedTileMask[int(tileOccupant)]))
+                occupants[destIndex] = tileOccupant;
+            occupantStates[destIndex].setDefault(tileOccupant);
         }
     }
 
@@ -80,9 +152,9 @@ void TileMap::postProcess()
             auto left = position.atDeltaWrap(-1, 0); /*auto center = position.atDeltaWrap(0, 0);*/ auto right = position.atDeltaWrap(1, 0);
             auto bottomLeft = position.atDeltaWrap(-1, -1); auto bottom = position.atDeltaWrap(0, -1); auto bottomRight = position.atDeltaWrap(1, -1);
 
-            if(isTileTypeInSet(topLeft, TileTypeMask::AnyGround) || isTileTypeInSet(top, TileTypeMask::AnyGround) || isTileTypeInSet(topRight, TileTypeMask::AnyGround) ||
-                isTileTypeInSet(left, TileTypeMask::AnyGround) || isTileTypeInSet(right, TileTypeMask::AnyGround) ||
-                isTileTypeInSet(bottomLeft, TileTypeMask::AnyGround) || isTileTypeInSet(bottom, TileTypeMask::AnyGround) || isTileTypeInSet(bottomRight, TileTypeMask::AnyGround))
+            if( isTileTypeInSet(topLeft, TileTypeMask::NonWater)    || isTileTypeInSet(top, TileTypeMask::NonWater)     || isTileTypeInSet(topRight, TileTypeMask::NonWater) ||
+                isTileTypeInSet(left, TileTypeMask::NonWater)       || isTileTypeInSet(right, TileTypeMask::NonWater)   ||
+                isTileTypeInSet(bottomLeft, TileTypeMask::NonWater) || isTileTypeInSet(bottom, TileTypeMask::NonWater)  || isTileTypeInSet(bottomRight, TileTypeMask::NonWater))
             {
                 center = TileType::ShallowWater;
             }

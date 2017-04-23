@@ -9,6 +9,16 @@ public:
     constexpr Vector2(float cx=0.0f, float cy=0.0f)
         : x(cx), y(cy) {}
 
+    float cross(const Vector2 &v) const
+    {
+        return x*v.y - y*v.x;
+    }
+
+    float dot(const Vector2 &v) const
+    {
+        return x*v.x + y*v.y;
+    }
+
     float length2() const
     {
         return x*x + y*y;
@@ -96,6 +106,10 @@ public:
         return *this;
     }
 
+    bool isNotZero() const
+    {
+        return x != 0 || y != 0;
+    }
     float x, y;
 };
 
@@ -107,6 +121,11 @@ inline Vector2 units2Pixels(const Vector2 &v)
 inline Vector2 pixels2Units(const Vector2 &v)
 {
     return v*Pixels2Units;
+}
+
+inline int orient2D(const Vector2 &e1, const Vector2 &e2, const Vector2 &p)
+{
+    return signOrZero((e2 - e1).cross(p - e1));
 }
 
 #endif //SMALL_ECO_DESTROYED_VECTOR2_HPP
