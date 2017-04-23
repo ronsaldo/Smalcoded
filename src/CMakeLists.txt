@@ -1,12 +1,18 @@
 set(SmallEcoDestroyedGameLogic_SOURCES
+    Box2.hpp
     ControllerState.hpp
     Float.hpp
     GameInterface.hpp
     GameLogic.cpp
     GameLogic.hpp
+    Image.cpp
+    Image.hpp
     MemoryZone.hpp
+    Rectangle.hpp
     Renderer.cpp
     Renderer.hpp
+    Tile.cpp
+    Tile.hpp
     Vector2.hpp
 )
 

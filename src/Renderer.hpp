@@ -17,6 +17,13 @@ inline void decodeColor(uint32_t color, int &r, int &g, int &b, int &a)
     a = (color >> 24) & 0xFF;
 }
 
+inline uint32_t convertRGBAHex(uint32_t color)
+{
+    int r, g, b, a;
+    decodeColor(color, r, g, b, a);
+    return encodeColor(b, g, r, a);
+}
+
 void render(const Framebuffer &framebuffer);
 
 #endif //SMALL_ECO_DESTROYED_RENDERER_HPP

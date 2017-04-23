@@ -6,7 +6,7 @@
 class Vector2
 {
 public:
-    Vector2(float cx=0.0f, float cy=0.0f)
+    constexpr Vector2(float cx=0.0f, float cy=0.0f)
         : x(cx), y(cy) {}
 
     float length2() const
@@ -26,6 +26,16 @@ public:
             return Vector2();
 
         return Vector2(x/l, y/l);
+    }
+
+    Vector2 floor() const
+    {
+        return Vector2(::floor(x), ::floor(y));
+    }
+
+    Vector2 ceil() const
+    {
+        return Vector2(::ceil(x), ::ceil(y));
     }
 
     friend Vector2 operator-(const Vector2 &v)
@@ -88,5 +98,15 @@ public:
 
     float x, y;
 };
+
+inline Vector2 units2Pixels(const Vector2 &v)
+{
+    return v*Units2Pixels;
+}
+
+inline Vector2 pixels2Units(const Vector2 &v)
+{
+    return v*Pixels2Units;
+}
 
 #endif //SMALL_ECO_DESTROYED_VECTOR2_HPP

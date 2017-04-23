@@ -21,7 +21,12 @@ public:
         delete [] data;
         data = new uint8_t[newSize];
         size = newSize;
-        memset(data, 0, newSize);
+        reset();
+    }
+
+    void reset()
+    {
+        memset(data, 0, size);
     }
 
     uint8_t *allocateBytes(size_t byteCount)

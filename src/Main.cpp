@@ -1,11 +1,12 @@
 #include "SDL.h"
+#include "SDL_image.h"
 #include "SDL_main.h"
 #include "GameInterface.hpp"
 #include "ControllerState.hpp"
 #include <algorithm>
 
 static constexpr size_t PersistentMemorySize = 64*1024*1024;
-static constexpr size_t TransientMemorySize = 256*1024*1024;
+static constexpr size_t TransientMemorySize = 32*1024*1024;
 
 #define GAME_TITLE "Small eco destroyed world"
 
@@ -182,6 +183,13 @@ static void onKeyEvent(const SDL_KeyboardEvent &event, bool isDown)
         keyboardControllerState.setButton(ControllerButton::Select, isDown);
         break;
 #ifdef USE_LIVE_CODING
+    case SDLK_r:
+        if(isDown)
+        {
+            persistentMemory.reset();
+            transientMemory.reset();
+        }
+        break;
     case SDLK_F1:
         quitting = true;
         break;
@@ -239,6 +247,7 @@ inline int mapDigitalAxis(SDL_GameController *controller, SDL_GameControllerButt
     else
         return 0;
 }
+
 static void pollJoysticks()
 {
     if(!gameController)
@@ -268,7 +277,7 @@ static void pollJoysticks()
     BUTTON_MAPPING(SDL_CONTROLLER_BUTTON_RIGHTSTICK, ControllerButton::RightStick);
 #undef BUTTON_MAPPING
     gamepadControllerState.setButton(ControllerButton::LeftTrigger, mapTriggerValue(SDL_GameControllerGetAxis(gameController, SDL_CONTROLLER_AXIS_TRIGGERLEFT)));
-    gamepadControllerState.setButton(ControllerButton::LeftTrigger, mapTriggerValue(SDL_GameControllerGetAxis(gameController, SDL_CONTROLLER_AXIS_TRIGGERRIGHT)));
+    gamepadControllerState.setButton(ControllerButton::RightTrigger, mapTriggerValue(SDL_GameControllerGetAxis(gameController, SDL_CONTROLLER_AXIS_TRIGGERRIGHT)));
     //printf("joystickCount %d\n", joystickCount);
 }
 
@@ -397,6 +406,7 @@ int main(int argc, char* argv[])
 {
     SDL_SetHint("SDL_HINT_NO_SIGNAL_HANDLERS", "1");
     SDL_Init(SDL_INIT_VIDEO | SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER | SDL_INIT_AUDIO);
+    IMG_Init(IMG_INIT_PNG);
 
     window = SDL_CreateWindow(GAME_TITLE, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, screenWidth, screenHeight, SDL_WINDOW_SHOWN);
     renderer = SDL_CreateRenderer(window, 0, SDL_RENDERER_PRESENTVSYNC);
@@ -423,6 +433,7 @@ int main(int argc, char* argv[])
     }
 
     SDL_Quit();
+    IMG_Quit();
 #endif
 
     return 0;
