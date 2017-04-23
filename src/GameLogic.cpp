@@ -18,6 +18,7 @@ static const AnimationState PlayerAnim_IdleRight = {0, 6, 2, 4, true, 1.0f};
 static const AnimationState PlayerAnim_WalkRight = {0, 8, 4, 4, true, 1.0f};
 static const AnimationState PlayerAnim_IdleUp = {0, 12, 2, 4, true, 1.0f};
 static const AnimationState PlayerAnim_WalkUp = {1, 0, 4, 4, true, 1.0f};
+static const AnimationState PlayerAnim_DeadIdle = {0, 14, 2, 2, true, 0.5f};
 
 static constexpr float BellyDecreaseSpeed = 0.25f;
 static constexpr float EmptyStomachHurtSpeed = 2.0f;
@@ -353,7 +354,9 @@ void updatePlayer(float delta, PlayerState &player)
     }
     else
     {
-        // TODO: Set the tombstone animation
+        player.changeAnimation(PlayerAnim_DeadIdle);
+        player.flipHorizontal = false;
+        player.flipVertical = false;
     }
 
     updateEntityAnimation(delta, player);
@@ -522,7 +525,7 @@ static bool turretAttack(float delta, int row, int column, TileType type, TileOc
         if(!turret.cooldown)
         {
             fireBullet(2.0f, position + fireDirection*0.5, fireDirection.normalized()*10.0f, Box2::fromCenterAndExtent(Vector2(), Vector2(0.1875f, 0.1875f)),
-                0xFFCCCCCC, 0xFFFFFFFF, BulletFlags::FiredByTurret, 5);
+                0xFFCCCCCC, 0xFFFFFFFF, BulletFlags::FiredByTurret, 1);
             turret.cooldown = 400;
         }
     }
