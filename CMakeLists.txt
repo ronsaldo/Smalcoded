@@ -45,7 +45,7 @@ include(${CMAKE_ROOT}/Modules/CheckLibraryExists.cmake)
 set(EXECUTABLE_OUTPUT_PATH "${Smalcoded_BINARY_DIR}/dist")
 set(LIBRARY_OUTPUT_PATH "${Smalcoded_BINARY_DIR}/dist")
 
-set(LIVE_CODING_SUPPORT False)
+option(LIVE_CODING_SUPPORT True "Build with live coding support")
 
 # Use pkg-config.
 find_package(PkgConfig)
