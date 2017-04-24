@@ -405,7 +405,11 @@ static void render()
         SDL_UnlockTexture(texture);
     }
 
-    SDL_SetRenderDrawColor(renderer, 255, 0, 255, 0);
+#ifdef USE_LIVE_CODING
+    SDL_SetRenderDrawColor(renderer, 255, 0, 255, 255);
+#else
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
+#endif
     SDL_RenderClear(renderer);
     if(currentGameInterface)
         SDL_RenderCopy(renderer, texture, nullptr, nullptr);

@@ -22,15 +22,17 @@ static const AnimationState PlayerAnim_IdleUp = {0, 12, 2, 4, true, 1.0f};
 static const AnimationState PlayerAnim_WalkUp = {1, 0, 4, 4, true, 1.0f};
 static const AnimationState PlayerAnim_DeadIdle = {0, 14, 2, 2, true, 0.5f};
 
-static constexpr float BellyDecreaseSpeed = 0.50f;
+static constexpr float BellyDecreaseSpeed = 1.00f;
 static constexpr float EmptyStomachHurtSpeed = 2.0f;
 
 static const TileOccupant TurretDestructionDropItems[] = {
     TileOccupant::None,
     TileOccupant::None,
-    TileOccupant::None,
-    TileOccupant::None,
     TileOccupant::Bullet,
+    TileOccupant::Bullet,
+    TileOccupant::Bullet,
+    TileOccupant::Bullet,
+    TileOccupant::Medkit,
     TileOccupant::Medkit,
 };
 
@@ -201,7 +203,7 @@ void pickPlayerItem(PlayerState &player, TileType &type, TileOccupant &occupant)
         player.increaseBelly(50);
         break;
     case TileOccupant::Medkit:
-        player.increaseHealth(10);
+        player.increaseHealth(20);
         break;
     case TileOccupant::Bullet:
         player.bullets += 10;

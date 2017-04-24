@@ -38,17 +38,17 @@ static float TileOccupantProbabilities[(int)TileOccupant::Count] = {
     /* None */ 40000,
 
     // Nasty stuff
-    /*Turret*/ 100,
+    /*Turret*/ 400,
 
     // Items
     /* Apple */ 200,
     /* Meat */ 250,
-    /* MilitaryMeal*/ 50,
-    /* Medkit */ 200,
-    /* Bullet */400,
+    /* MilitaryMeal*/ 80,
+    /* Medkit */ 100,
+    /* Bullet */250,
     /* TripleBullet */50,
-    /* DemolitionBullet */10,
-    /* TripleDemolitionBullet */1,
+    /* DemolitionBullet */25,
+    /* TripleDemolitionBullet */5,
 };
 
 static const uint32_t TileOccupantPermittedTileMask[(int)TileOccupant::Count] = {
