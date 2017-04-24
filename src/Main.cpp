@@ -128,7 +128,12 @@ extern "C" GameInterface *getGameInterface();
 
 void reloadGameInterface()
 {
-    currentGameInterface = getGameInterface();
+    if(!currentGameInterface)
+    {
+        currentGameInterface = getGameInterface();
+        currentGameInterface->setPersistentMemory(&persistentMemory);
+        currentGameInterface->setTransientMemory(&transientMemory);
+    }
 }
 
 #endif

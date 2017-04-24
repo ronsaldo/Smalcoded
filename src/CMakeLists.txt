@@ -24,9 +24,8 @@ if(LIVE_CODING_SUPPORT)
     add_definitions(-DUSE_LIVE_CODING)
     add_library(SmalcodedGameLogic MODULE ${SmalcodedGameLogic_SOURCES})
     target_link_libraries(SmalcodedGameLogic ${Smalcoded_DEP_LIBS})
-
 else()
-    set(Smalcoded_SOURCES ${Smalcoded_SOURCES} ${SmalcodedGameLogic_SOURCES})
+    set(Smalcoded_SOURCES ${SmalcodedGameLogic_SOURCES} ${Smalcoded_SOURCES} )
 endif()
 
 add_executable(Smalcoded ${Smalcoded_SOURCES})

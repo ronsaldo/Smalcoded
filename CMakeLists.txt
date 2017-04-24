@@ -45,14 +45,14 @@ include(${CMAKE_ROOT}/Modules/CheckLibraryExists.cmake)
 set(EXECUTABLE_OUTPUT_PATH "${Smalcoded_BINARY_DIR}/dist")
 set(LIBRARY_OUTPUT_PATH "${Smalcoded_BINARY_DIR}/dist")
 
-set(LIVE_CODING_SUPPORT True)
+set(LIVE_CODING_SUPPORT False)
 
 # Use pkg-config.
 find_package(PkgConfig)
 if(ON_EMSCRIPTEN)
     # Use SDL2 port instead of SDL1
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_SDL=2 -s USE_SDL_IMAGE=2 -s SDL2_IMAGE_FORMATS='[\"png\"]' -s USE_SDL_MIXER=2 -Wno-warn-absolute-paths")
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -s USE_SDL=2 USE_SDL_IMAGE=2 -s SDL2_IMAGE_FORMATS='[\"png\"]' -s USE_SDL_MIXER=2 -Wno-warn-absolute-paths")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_SDL=2 -s USE_SDL_IMAGE=2 -s SDL2_IMAGE_FORMATS='[\"png\"]' -s TOTAL_MEMORY=50331648 -Wno-warn-absolute-paths")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -s USE_SDL=2 USE_SDL_IMAGE=2 -s SDL2_IMAGE_FORMATS='[\"png\"]' -s TOTAL_MEMORY=50331648 -Wno-warn-absolute-paths")
 
     set(SDL2_LIBRARIES)
     set(CMAKE_EXECUTABLE_SUFFIX .html)
