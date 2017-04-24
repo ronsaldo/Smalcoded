@@ -23,6 +23,8 @@ enum class TileType: uint8_t
     Forest,
     Earth,
     Rock,
+    DevilStone,
+    HolyBarrier,
 
     Count,
 };
@@ -45,10 +47,18 @@ enum class TileOccupant : uint8_t
     DemolitionBullet,
     TripleDemolitionBullet,
 
+    // Special Items
+    Flippers,
+    Torch,
+    InflatableBoat,
+    MotorBoat,
+    HolyProtection,
+    HellGate,
+
     Count,
 
     ItemBegin = Apple,
-    ItemEnd = TripleDemolitionBullet,
+    ItemEnd = HellGate,
 
     StructureBegin = Turret,
     StructureEnd = Turret,
@@ -78,11 +88,13 @@ enum Bits
     Forest = 1<<int(TileType::Forest),
     Earth = 1<<int(TileType::Earth),
     Rock = 1<<int(TileType::Rock),
+    DevilStone = 1<<int(TileType::DevilStone),
+    HolyBarrier = 1<<int(TileType::HolyBarrier),
 
     AnyWater = DeepWater | Water | ShallowWater,
-    OceanWater = DeepWater | Water,
-    AnyGround = Ice | Sand | Grass | Forest | Earth,
+    AnyGround = Ice | Sand | Grass | Forest | Earth | HolyBarrier,
     NonWater = AnyGround | Rock,
+    Anywhere = uint32_t(~DevilStone),
 };
 };
 
@@ -111,7 +123,10 @@ struct ImageCoordinate
     typedef ET ElementType;
 
     ImageCoordinate(ElementType *data, int width, int height, int x = 0, int y = 0)
-        : data(data), width(width), height(height), x(x), y(y) {}
+        : data(data), width(width), height(height), x(x), y(y)
+    {
+        index = y*width + x;
+    }
 
     void advanceRow()
     {
@@ -165,6 +180,7 @@ union TileOccupantState
     {
         uint8_t renderState;
         uint8_t health;
+        uint16_t milliseconds;
     } generic;
 
     struct

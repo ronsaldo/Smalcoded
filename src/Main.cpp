@@ -1,11 +1,13 @@
 #include "SDL.h"
 #include "SDL_image.h"
+#include "SDL_mixer.h"
 #include "SDL_main.h"
 #include "GameInterface.hpp"
 #include "ControllerState.hpp"
+#include "SoundSamples.hpp"
 #include <algorithm>
 
-#define GAME_TITLE "Small eco destroyed world"
+#define GAME_TITLE "SMALCODED: Small Eco Destroyed World"
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
@@ -56,6 +58,13 @@ typedef void *LibraryHandle;
 
 static int screenWidth = 640;
 static int screenHeight = 480;
+#ifdef USE_LIVE_CODING
+static int windowWidth = 640;
+static int windowHeight = 480;
+#else
+static int windowWidth = 1024;
+static int windowHeight = 768;
+#endif
 static MemoryZone persistentMemory;
 static MemoryZone transientMemory;
 static bool quitting = false;
@@ -74,7 +83,7 @@ static ControllerState gamepadControllerState;
 static ControllerState currentControllerState;
 
 #ifdef USE_LIVE_CODING
-static constexpr const char *GameLogicLibraryName = LIBRARY_FILENAME("SmallEcoDestroyedGameLogic");
+static constexpr const char *GameLogicLibraryName = LIBRARY_FILENAME("SmalcodedGameLogic");
 
 static LibraryHandle libraryHandle;
 static FileTimestamp lastLibraryModification;
@@ -121,11 +130,59 @@ void reloadGameInterface()
 
 #endif
 
+static const char *SoundSampleFileNames[(int)SoundSampleName::Count] = {
+    nullptr,
+    "assets/explo1.wav",
+    "assets/explo2.wav",
+    "assets/explo3.wav",
+    "assets/explo4.wav",
+
+    "assets/pick1.wav",
+    "assets/pick2.wav",
+
+    "assets/shot2.wav",
+    "assets/shot2.wav",
+    "assets/shot2.wav",
+};
+
+static Mix_Chunk *soundSamples[(int)SoundSampleName::Count];
+
+static void loadSoundSamples()
+{
+    for(int i = 0; i < (int)SoundSampleName::Count; ++i)
+    {
+        auto fileName = SoundSampleFileNames[i];
+        if(!fileName)
+            continue;
+
+        auto sample = soundSamples[i] = Mix_LoadWAV(fileName);
+        if(!sample)
+            fprintf(stderr, "Failed to load sample '%s': %s\n", fileName, Mix_GetError());
+    }
+}
+
+void playSoundSample(SoundSampleName name)
+{
+    auto sample = soundSamples[int(name)];
+    if(sample)
+        Mix_PlayChannel(-1, sample, 0);
+}
+
 static void onKeyEvent(const SDL_KeyboardEvent &event, bool isDown)
 {
     switch(event.keysym.sym)
     {
-    case SDLK_z:
+    case SDLK_SPACE:
+        keyboardControllerState.setButton(ControllerButton::X, isDown);
+        break;
+    case SDLK_LSHIFT:
+        keyboardControllerState.setButton(ControllerButton::A, isDown);
+        break;
+    case SDLK_q:
+    case SDLK_TAB:
+        keyboardControllerState.setButton(ControllerButton::B, isDown);
+        break;
+/*    case SDLK_z:
         keyboardControllerState.setButton(ControllerButton::A, isDown);
         break;
     case SDLK_x:
@@ -148,7 +205,7 @@ static void onKeyEvent(const SDL_KeyboardEvent &event, bool isDown)
         break;
     case SDLK_d:
         keyboardControllerState.setButton(ControllerButton::RightTrigger, isDown);
-        break;
+        break;*/
     case SDLK_LEFT:
         if(isDown)
             keyboardControllerState.leftXAxis = -1;
@@ -176,9 +233,10 @@ static void onKeyEvent(const SDL_KeyboardEvent &event, bool isDown)
     case SDLK_ESCAPE:
         keyboardControllerState.setButton(ControllerButton::Start, isDown);
         break;
-    case SDLK_TAB:
+/*    case SDLK_TAB:
         keyboardControllerState.setButton(ControllerButton::Select, isDown);
         break;
+*/
     case SDLK_r:
         if(isDown)
         {
@@ -219,15 +277,17 @@ static void openGameController()
 
 constexpr int AxisMinValue = -32768;
 constexpr int AxisMaxValue = 32767;
+constexpr int DeadZoneRange = (AxisMaxValue - AxisMinValue) / 8;
 
-inline int mapAxisValue(Sint16 value)
+inline float mapAxisValue(Sint16 value)
 {
-    if(value > AxisMaxValue / 2)
-        return 1;
-    else if(value < AxisMinValue / 2)
-        return -1;
-    else
+    if(-DeadZoneRange <= value && value <= DeadZoneRange)
         return 0;
+
+    if(value > 0)
+        return float(value - DeadZoneRange) / (AxisMaxValue - DeadZoneRange);
+    else
+        return float(value + DeadZoneRange) / (-AxisMinValue - DeadZoneRange);
 }
 
 inline bool mapTriggerValue(Sint16 value)
@@ -404,8 +464,11 @@ int main(int argc, char* argv[])
     SDL_SetHint("SDL_HINT_NO_SIGNAL_HANDLERS", "1");
     SDL_Init(SDL_INIT_VIDEO | SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER | SDL_INIT_AUDIO);
     IMG_Init(IMG_INIT_PNG);
+    Mix_Init(0);
+    Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 4096);
+    Mix_AllocateChannels(16);
 
-    window = SDL_CreateWindow(GAME_TITLE, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, screenWidth, screenHeight, SDL_WINDOW_SHOWN);
+    window = SDL_CreateWindow(GAME_TITLE, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, windowWidth, windowHeight, SDL_WINDOW_SHOWN);
     renderer = SDL_CreateRenderer(window, 0, SDL_RENDERER_PRESENTVSYNC);
     texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_STREAMING, screenWidth, screenHeight);
 
@@ -413,6 +476,8 @@ int main(int argc, char* argv[])
     transientMemory.reserve(TransientMemorySize);
 
     lastUpdateTime = SDL_GetTicks();
+
+    loadSoundSamples();
 
 #ifdef __EMSCRIPTEN__
     emscripten_set_main_loop(mainLoopIteration, 60, 1);
@@ -431,6 +496,7 @@ int main(int argc, char* argv[])
 
     SDL_Quit();
     IMG_Quit();
+    Mix_Quit();
 #endif
 
     return 0;

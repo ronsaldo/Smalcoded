@@ -1,8 +1,10 @@
 #include "GameInterface.hpp"
 #include "GameLogic.hpp"
 #include "Renderer.hpp"
+#include "SoundSamples.hpp"
 #include <algorithm>
 #include <stdio.h>
+#include <time.h>
 
 GlobalState *globalState;
 static MemoryZone *transientMemoryZone;
@@ -20,7 +22,7 @@ static const AnimationState PlayerAnim_IdleUp = {0, 12, 2, 4, true, 1.0f};
 static const AnimationState PlayerAnim_WalkUp = {1, 0, 4, 4, true, 1.0f};
 static const AnimationState PlayerAnim_DeadIdle = {0, 14, 2, 2, true, 0.5f};
 
-static constexpr float BellyDecreaseSpeed = 0.25f;
+static constexpr float BellyDecreaseSpeed = 0.50f;
 static constexpr float EmptyStomachHurtSpeed = 2.0f;
 
 static const TileOccupant TurretDestructionDropItems[] = {
@@ -32,7 +34,27 @@ static const TileOccupant TurretDestructionDropItems[] = {
     TileOccupant::Medkit,
 };
 
-void initializePlayer(PlayerState &player)
+static void placeSpecialItem(size_t x, size_t y, TileOccupant item)
+{
+    auto tileIndex = global.map.tileIndexAtRowColumn(y, x);
+    global.map.occupants[tileIndex] = item;
+    global.map.occupantStates[tileIndex].setDefault(item);
+}
+static void placeSpecialItems()
+{
+    placeSpecialItem(157, 54, TileOccupant::DemolitionBullet);
+    placeSpecialItem(207, 121, TileOccupant::DemolitionBullet);
+    placeSpecialItem(139, 139, TileOccupant::DemolitionBullet);
+    placeSpecialItem(160, 49, TileOccupant::Flippers);
+
+    placeSpecialItem(180, 194, TileOccupant::Torch);
+    placeSpecialItem(245, 181, TileOccupant::InflatableBoat);
+    placeSpecialItem(455, 178, TileOccupant::MotorBoat);
+    placeSpecialItem(113, 85, TileOccupant::HolyProtection);
+    placeSpecialItem(0, 5, TileOccupant::HellGate);
+}
+
+static void initializePlayer(PlayerState &player)
 {
     player.spriteType = SpriteType::Character;
     player.animationState = PlayerAnim_IdleDown;
@@ -42,14 +64,14 @@ void initializePlayer(PlayerState &player)
     player.collisionBoundingBox = player.boundingBox;
     player.feetBoundingBox = Box2(player.boundingBox.min, player.boundingBox.min + Vector2(player.boundingBox.width(), player.boundingBox.height()/2))
                             .shinkBy(Vector2(0.1, 0.0));
-    player.tileMovementMask = TileTypeMask::AnyGround | TileTypeMask::ShallowWater;
+    player.tileMovementMask = TileTypeMask::AnyGround;
 
     player.health = 100;
     player.belly = 25;
     player.bullets = 0;
 }
 
-bool canEntityMoveToTileAtPoint(const Entity &entity, const Vector2 &targetPoint)
+static bool canEntityMoveToTileAtPoint(const Entity &entity, const Vector2 &targetPoint)
 {
     auto tileIndex = global.map.tileIndexAtPoint(targetPoint);
     auto tileType = global.map.tiles[tileIndex];
@@ -57,7 +79,7 @@ bool canEntityMoveToTileAtPoint(const Entity &entity, const Vector2 &targetPoint
     return isTileTypeInSet(tileType, entity.tileMovementMask) && isPassableOccupant(occupant);
 }
 
-bool canEntityMoveToPoint(const Entity &entity, const Vector2 &targetPoint)
+static bool canEntityMoveToPoint(const Entity &entity, const Vector2 &targetPoint)
 {
     return
         canEntityMoveToTileAtPoint(entity, entity.feetBoundingBox.bottomLeft() + targetPoint) &&
@@ -67,17 +89,21 @@ bool canEntityMoveToPoint(const Entity &entity, const Vector2 &targetPoint)
         canEntityMoveToTileAtPoint(entity, entity.feetBoundingBox.center() + targetPoint); // Is this needed?
 }
 
-void initializeGlobalState()
+static void initializeGlobalState()
 {
     if(global.isInitialized)
         return;
+
+    global.random.seed = time(nullptr)^rand();
 
     global.map.loadFromFile("assets/earth_map.png");
     global.mapTileSet.loadFromFile("assets/tiles.png");
     global.characterTileSet.loadFromFile("assets/character-sprites.png");
     global.spriteSet.loadFromFile("assets/sprites.png");
     global.minimap.loadFromFile("assets/minimap.png");
+
     initializePlayer(global.player);
+    placeSpecialItems();
 
     global.numberOfDeadBullets = MaxNumberOfBullets;
     for(size_t i = 0; i < MaxNumberOfBullets; ++i)
@@ -152,9 +178,24 @@ void pickPlayerItem(PlayerState &player, TileType &type, TileOccupant &occupant)
     {
     case TileOccupant::Apple:
         player.increaseBelly(10);
+        if(global.decayStage == DecayStage::Dead)
+        {
+            player.receiveDamage(5);
+            global.somethingExploded = true;
+        }
         break;
     case TileOccupant::Meat:
         player.increaseBelly(20);
+        if(global.decayStage == DecayStage::Dying)
+        {
+            player.receiveDamage(10);
+            global.somethingExploded = true;
+        }
+        else if(global.decayStage == DecayStage::Dead)
+        {
+            player.receiveDamage(50);
+            global.somethingExploded = true;
+        }
         break;
     case TileOccupant::MilitaryMeal:
         player.increaseBelly(50);
@@ -169,22 +210,47 @@ void pickPlayerItem(PlayerState &player, TileType &type, TileOccupant &occupant)
         player.bullets += 40;
         break;
     case TileOccupant::DemolitionBullet:
-        player.demolitionBullets += 3;
+        player.demolitionBullets += 1;
         break;
     case TileOccupant::TripleDemolitionBullet:
         player.demolitionBullets += 10;
         break;
+    case TileOccupant::Flippers:
+        player.tileMovementMask |= TileTypeMask::ShallowWater;
+        break;
+    case TileOccupant::InflatableBoat:
+        player.tileMovementMask |= TileTypeMask::ShallowWater | TileTypeMask::Water;
+        break;
+    case TileOccupant::MotorBoat:
+        player.tileMovementMask |= TileTypeMask::ShallowWater | TileTypeMask::Water | TileTypeMask::DeepWater;
+        break;
+    case TileOccupant::Torch:
+        player.hasIceProtection = true;
+        break;
+    case TileOccupant::HolyProtection:
+        player.hasHolyProtection = true;
+        break;
+    case TileOccupant::HellGate:
+        // Do not remove the gate.
+        global.isGameCompleted = true;
+        return;
     default:
-        printf("TODO: Pick item %d\n", int(occupant));
+        printf("TODO: Picked item %d\n", int(occupant));
         break;
     }
 
     occupant = TileOccupant::None;
+    global.itemWasPicked = true;
 }
 
 static void updateAlivePlayerMovement(float delta, PlayerState &player)
 {
-    auto direction = Vector2(global.controllerState.leftXAxis, global.controllerState.leftYAxis).normalized();
+    auto rawDirection = Vector2(global.controllerState.leftXAxis, global.controllerState.leftYAxis);
+    auto directionLength = rawDirection.length();
+    Vector2 direction = rawDirection;
+    if(directionLength > 1.0f)
+        direction = rawDirection * (1.0f / directionLength);
+
     bool playingIdle = false;
     player.flipHorizontal = false;
     player.flipVertical = false;
@@ -239,10 +305,10 @@ static void updateAlivePlayerMovement(float delta, PlayerState &player)
         }
     }
 
-    auto playerSpeed = 5*KmHr2MS;
+    auto playerSpeed = 2.0;
     player.running = global.controllerState.getButton(ControllerButton::A);
     if(player.running)
-        playerSpeed *= 3;
+        playerSpeed *= 2.5;
     player.velocity = direction*playerSpeed;
 
     player.animationState.playRate = player.isActuallyRunning() ? 2.0f : 1.0f;
@@ -257,6 +323,9 @@ static void updateAlivePlayerMovement(float delta, PlayerState &player)
     player.position = normalizeWorldCoordinate(player.position);
 
     // Interact with the touching tiles.
+    bool receiveHolyDamage = false;
+    bool receiveIceDamage = false;
+    bool needsBoat = false;;
     entityTouchingTilesDo(player, [&](size_t tileIndex) {
         auto &type = global.map.tiles[tileIndex];
         auto &occupant = global.map.occupants[tileIndex];
@@ -266,7 +335,26 @@ static void updateAlivePlayerMovement(float delta, PlayerState &player)
         {
             pickPlayerItem(player, type, occupant);
         }
+        else if(type == TileType::HolyBarrier && !player.hasHolyProtection)
+        {
+            receiveHolyDamage = true;
+        }
+        else if(type == TileType::Ice && !player.hasIceProtection)
+        {
+            receiveIceDamage = true;
+        }
+        else if(type == TileType::Water || type == TileType::DeepWater)
+        {
+            needsBoat = true;
+        }
     });
+
+    player.inBoat = needsBoat && isTileTypeInSet(TileType::Water, player.tileMovementMask);
+
+    if(receiveHolyDamage)
+        player.receiveDamage(50*delta);
+    else if(receiveIceDamage)
+        player.receiveDamage(25*delta);
 }
 
 static void fireBullet(float timeToLive, Vector2 position, Vector2 velocity, Box2 boundingBox, uint32_t color, uint32_t flashColor, uint32_t flags, float power)
@@ -287,6 +375,8 @@ static void fireBullet(float timeToLive, Vector2 position, Vector2 velocity, Box
     bullet.flashColor = flashColor;
     bullet.flags = flags;
     bullet.power = power;
+
+    global.shotWasFired = true;
 }
 
 inline Vector2 bulletOffsetForFaceOrientation(FaceOrientation orientation)
@@ -348,6 +438,9 @@ static void updateAlivePlayer(float delta, PlayerState &player)
 
 void updatePlayer(float delta, PlayerState &player)
 {
+    if(global.isPaused || global.isGameCompleted)
+        return;
+
     if(player.isAlive())
     {
         updateAlivePlayer(delta, player);
@@ -367,6 +460,12 @@ static void updateMap(float delta)
     constexpr float MapTileFPS = 1.25;
 
     global.map.animationVariant = global.currentTime*MapTileFPS;
+    if(global.matchTime > 10*60)
+        global.decayStage = DecayStage::Dead;
+    else if(global.matchTime > 5*60)
+        global.decayStage = DecayStage::Dying;
+    else
+        global.decayStage = DecayStage::Normal;
 }
 
 static void tileOccupantDestroyed(TileOccupant &occupant, TileOccupantState &occupantState)
@@ -395,34 +494,40 @@ static void checkBulletCollisions(BulletState &bullet)
         return;
     }
 
-    // Turret do not hurt other turrets.
-    if(!bullet.wasFiredByTurret())
+    // Check whether is there something interesting on this tile.
+    auto tileIndex = global.map.tileIndexAtPoint(bullet.position);
+    auto &tileType = global.map.tiles[tileIndex];
+    auto &occupant = global.map.occupants[tileIndex];
+    auto &occupantState = global.map.occupantStates[tileIndex];
+
+    if(!bullet.isHighBullet() && (tileType == TileType::Rock || tileType == TileType::DevilStone))
     {
-        // Check whether is there something interesting on this tile.
-        auto tileIndex = global.map.tileIndexAtPoint(bullet.position);
-        auto &tileType = global.map.tiles[tileIndex];
-        auto &occupant = global.map.occupants[tileIndex];
-        auto &occupantState = global.map.occupantStates[tileIndex];
-
-        if(tileType == TileType::Rock)
+        bullet.gotTarget();
+        if(bullet.isDemolition() && tileType == TileType::Rock)
         {
-            bullet.gotTarget();
-            if(bullet.isDemolition())
-                tileType = TileType::Earth;
+            tileType = TileType::Earth;
+            global.somethingExploded = true;
         }
+    }
 
-        if(isTileOccupantAStructure(occupant))
+    // Turret do not hurt other turrets.
+    if(isTileOccupantAStructure(occupant) && !bullet.wasFiredByTurret())
+    {
+        bullet.gotTarget();
+        occupantState.generic.health = std::max(0, int(occupantState.generic.health - bullet.power));
+        if(occupantState.generic.health == 0)
         {
-            bullet.gotTarget();
-            occupantState.generic.health = std::max(0, int(occupantState.generic.health - bullet.power));
-            if(occupantState.generic.health == 0)
-                tileOccupantDestroyed(occupant, occupantState);
+            tileOccupantDestroyed(occupant, occupantState);
+            global.somethingExploded = true;
         }
     }
 }
 
 static void updateBullets(float delta)
 {
+    if(global.isPaused)
+        return;
+
     // Work in a temporary copy.
     int bulletsToUpdate[MaxNumberOfBullets];
     int numberOfBulletsToUpdate = global.numberOfAliveBullets;
@@ -455,7 +560,6 @@ static void updateBullets(float delta)
             global.deadBullets[global.numberOfDeadBullets++] = bulletIndex;
         }
     }
-
 }
 
 static bool castPlayerVisibleRay(const Vector2 &start, const Vector2 &step, TileType type = TileType::None, int maxSteps = 30)
@@ -470,14 +574,15 @@ static bool castPlayerVisibleRay(const Vector2 &start, const Vector2 &step, Tile
     if(playerDirectionAmount < 0)
         return false;
 
-    if(type == TileType::Rock)
+    if(type == TileType::Rock || type == TileType::DevilStone)
         return true;
 
     auto position = start;
     for(int i = 0; i < maxSteps; ++i, position += step)
     {
         size_t tileIndex = global.map.tileIndexAtPoint(position);
-        if(global.map.tiles[tileIndex] == TileType::Rock)
+        auto tile = global.map.tiles[tileIndex];
+        if(tile == TileType::Rock || tile == TileType::DevilStone)
             return false;
 
         auto depth = (position - start).dot(direction);
@@ -490,6 +595,9 @@ static bool castPlayerVisibleRay(const Vector2 &start, const Vector2 &step, Tile
 
 static bool turretAttack(float delta, int row, int column, TileType type, TileOccupantState &state)
 {
+    if(global.isGameCompleted)
+        return false;
+
     auto &turret = state.turret;
     bool isDiagonal = turret.renderState & 1;
     bool result = false;
@@ -500,7 +608,7 @@ static bool turretAttack(float delta, int row, int column, TileType type, TileOc
         if(!result) \
         { \
             fireDirection = Vector2(dx, dy); \
-            result = castPlayerVisibleRay(position, fireDirection); \
+            result = castPlayerVisibleRay(position, fireDirection, type); \
         }
 
     if(isDiagonal)
@@ -524,8 +632,12 @@ static bool turretAttack(float delta, int row, int column, TileType type, TileOc
         turret.milliseconds = isDiagonal ? 0 : 500;
         if(!turret.cooldown)
         {
+            uint32_t flags = BulletFlags::FiredByTurret;
+            if(type == TileType::Rock || type == TileType::DevilStone)
+                flags |= BulletFlags::HighBullet;
+
             fireBullet(2.0f, position + fireDirection*0.5, fireDirection.normalized()*10.0f, Box2::fromCenterAndExtent(Vector2(), Vector2(0.1875f, 0.1875f)),
-                0xFFCCCCCC, 0xFFFFFFFF, BulletFlags::FiredByTurret, 1);
+                0xFFCCCCCC, 0xFFFFFFFF, flags, 1);
             turret.cooldown = 400;
         }
     }
@@ -535,6 +647,9 @@ static bool turretAttack(float delta, int row, int column, TileType type, TileOc
 
 static void updateTurret(float delta, int row, int column, TileType type, TileOccupantState &state)
 {
+    if(global.isPaused)
+        return;
+
     auto &turret = state.turret;
     auto isDiagonal = turret.renderState & 1;
     turret.cooldown = std::max(0, int(turret.cooldown - delta*1000));
@@ -549,6 +664,18 @@ static void updateTurret(float delta, int row, int column, TileType type, TileOc
         if(isDiagonal != isNowDiagonal)
             turretAttack(delta, row, column, type, state);
     }
+}
+
+static void updateTorch(float delta, TileOccupantState &state)
+{
+    state.generic.milliseconds += delta*1000;
+    state.generic.renderState = (state.generic.milliseconds % 300) >= 150 ? 1 : 0;
+}
+
+static void updateHellGate(float delta, TileOccupantState &state)
+{
+    state.generic.milliseconds += delta*1000;
+    state.generic.renderState = (state.generic.milliseconds % 300) >= 150 ? 1 : 0;
 }
 
 static void updateScreenTileOccupant(float delta, int row, int column)
@@ -566,6 +693,12 @@ static void updateScreenTileOccupant(float delta, int row, int column)
     case TileOccupant::Turret:
         updateTurret(delta, row, column, type, occupantState);
         break;
+    case TileOccupant::Torch:
+        updateTorch(delta, occupantState);
+        break;
+    case TileOccupant::HellGate:
+        updateHellGate(delta, occupantState);
+        break;
     default:
         break;
     }
@@ -578,28 +711,68 @@ static void updateScreenTileOccupants(float delta)
     });
 }
 
+static void doCheating()
+{
+    auto &player = global.player;
+    return;
+    //global.decayStage = DecayStage::Normal;
+    //global.decayStage = DecayStage::Dying;
+    //global.decayStage = DecayStage::Dead;
+
+    //printf("player position %f %f\n", player.position.x, player.position.y);
+    //player.position = Vector2(0, 7); // The ending sanctum
+
+    player.health = 100; // God mode
+
+    player.hasHolyProtection = true;
+    player.hasIceProtection = true;
+
+    // Jesus mode
+    player.tileMovementMask |= TileTypeMask::Water | TileTypeMask::ShallowWater | TileTypeMask::DeepWater;
+}
+
 void update(float delta, const ControllerState &controllerState)
 {
     initializeGlobalState();
-
-    // Store the current time and update the controller state.
-    global.currentTime += delta;
-    global.matchTime += delta;
-    global.oldControllerState = global.controllerState;
-    global.controllerState = controllerState;
 
     // Pause button
     if(global.isButtonPressed(ControllerButton::Start))
         global.isPaused = !global.isPaused;
 
+    // Store the current time and update the controller state.
+    global.currentTime += delta;
+    if(!global.isPaused && !global.isGameCompleted)
+        global.matchTime += delta;
+    global.oldControllerState = global.controllerState;
+    global.controllerState = controllerState;
+
+    global.shotWasFired = false;
+    global.itemWasPicked = false;
+    global.somethingExploded = false;
+
     updateMap(delta);
-    if(!global.isPaused)
-    {
-        updatePlayer(delta, global.player);
-        updateScreenTileOccupants(delta);
-        updateBullets(delta);
-    }
+    doCheating();
+
+    updatePlayer(delta, global.player);
+    updateScreenTileOccupants(delta);
+    updateBullets(delta);
+
+    if(global.shotWasFired)
+        playShotSound(global.random.next32());
+    if(global.itemWasPicked)
+        playPickSound(global.random.next32());
+    if(global.somethingExploded)
+        playExplosionSound(global.random.next32());
+
     global.camera.position = global.player.position;
+}
+
+void Entity::receiveDamage(float damage)
+{
+    bool wasAlive = isAlive();
+    health = std::max(health - damage, 0.0f);
+    if(wasAlive && !isAlive())
+        global.somethingExploded = true;
 }
 
 class GameInterfaceImpl : public GameInterface

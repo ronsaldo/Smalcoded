@@ -34,10 +34,10 @@ struct ControllerState
     {
     }
 
-    int leftXAxis;
-    int leftYAxis;
-    int rightXAxis;
-    int rightYAxis;
+    float leftXAxis;
+    float leftYAxis;
+    float rightXAxis;
+    float rightYAxis;
 
     int buttons;
 

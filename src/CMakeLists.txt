@@ -1,4 +1,4 @@
-set(SmallEcoDestroyedGameLogic_SOURCES
+set(SmalcodedGameLogic_SOURCES
     Box2.hpp
     ControllerState.hpp
     Float.hpp
@@ -16,19 +16,19 @@ set(SmallEcoDestroyedGameLogic_SOURCES
     Vector2.hpp
 )
 
-set(SmallEcoDestroyed_SOURCES
+set(Smalcoded_SOURCES
     Main.cpp
 )
 
 if(LIVE_CODING_SUPPORT)
     add_definitions(-DUSE_LIVE_CODING)
-    add_library(SmallEcoDestroyedGameLogic MODULE ${SmallEcoDestroyedGameLogic_SOURCES})
-    target_link_libraries(SmallEcoDestroyedGameLogic ${SmallEcoDestroyed_DEP_LIBS})
+    add_library(SmalcodedGameLogic MODULE ${SmalcodedGameLogic_SOURCES})
+    target_link_libraries(SmalcodedGameLogic ${Smalcoded_DEP_LIBS})
 
 else()
-    set(SmallEcoDestroyed_SOURCES ${SmallEcoDestroyed_SOURCES} ${SmallEcoDestroyedGameLogic_SOURCES})
+    set(Smalcoded_SOURCES ${Smalcoded_SOURCES} ${SmalcodedGameLogic_SOURCES})
 endif()
 
-add_executable(SmallEcoDestroyed ${SmallEcoDestroyed_SOURCES})
-set_target_properties(SmallEcoDestroyed PROPERTIES LINK_FLAGS "${ASSET_FLAGS}")
-target_link_libraries(SmallEcoDestroyed ${SmallEcoDestroyed_DEP_LIBS})
+add_executable(Smalcoded ${Smalcoded_SOURCES})
+set_target_properties(Smalcoded PROPERTIES LINK_FLAGS "${ASSET_FLAGS}")
+target_link_libraries(Smalcoded ${Smalcoded_DEP_LIBS})

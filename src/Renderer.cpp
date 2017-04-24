@@ -19,7 +19,18 @@ static const Rectangle TileOccupantSprites[] = {
     /* TripleBullet */{6*32, 4*32, 32, 32},
     /* DemolitionBullet */{7*32, 4*32, 32, 32},
     /* TripleDemolitionBullet */{8*32, 4*32, 32, 32},
+
+    // Special Items
+    /* Flippers */{10*32, 4*32, 32, 32},
+    /* Torch */{11*32, 4*32, 32, 32},
+    /*InflatableBoat*/{13*32, 4*32, 32, 32},
+    /*MotorBoat*/{0*32, 5*32, 32, 32},
+    /*HolyProtection*/{1*32, 5*32, 32, 32},
+    /*HellGate*/{2*32, 5*32, 32, 32},
 };
+
+static const Rectangle BoatBack = {14*32, 4*32, 32, 32};
+static const Rectangle BoatFront = {15*32, 4*32, 32, 32};
 
 static const char FontCharacters[] = "0123456789?!+-@#()ABCDEFGHIJKLMNOPQRSTUVWXYZ$";
 static const uint16_t FontTileSize = 32;
@@ -271,6 +282,8 @@ static void renderBackground(const Framebuffer &framebuffer)
     int maxY = maxPosition.y;
 
     auto destY = offsetY;
+    int decayStageOffset = int(global.decayStage)*2;
+
     //printf("offsets %d %d\n", offsetX, offsetY);
     for(int y = minY; y <= maxY; ++y, destY += pixelsPerTile)
     {
@@ -285,7 +298,8 @@ static void renderBackground(const Framebuffer &framebuffer)
 
             //drawRectangle(framebuffer, color, destX, framebuffer.height - destY - pixelsPerTile, pixelsPerTile, pixelsPerTile);
             int animationVariant = Random::hashBit(global.map.animationVariant ^ global.map.tileRandom[tileIndex]);
-            blitTileRectangle(framebuffer, destX, framebuffer.height -1 - (destY + pixelsPerTile) , global.mapTileSet, global.mapTileSet.getTileRectangle(int(tileType), animationVariant, pixelsPerTile, pixelsPerTile));
+            blitTileRectangle(framebuffer, destX, framebuffer.height -1 - (destY + pixelsPerTile) , global.mapTileSet,
+                global.mapTileSet.getTileRectangle(int(tileType), animationVariant + decayStageOffset, pixelsPerTile, pixelsPerTile));
 
             // Draw the tile occupant
             auto occupant = global.map.occupants[tileIndex];
@@ -325,9 +339,28 @@ static void renderEntity(const Framebuffer &framebuffer, const Entity &entity)
     }
 }
 
+static void renderPlayer(const Framebuffer &framebuffer, const PlayerState &player)
+{
+    if(global.isGameCompleted)
+        return;
+
+    auto boatOffset = Vector2(0.0f, -0.2f);
+    auto spritePosition = worldToScreen(framebuffer, player.position + player.boundingBox.bottomLeft() + boatOffset);
+    auto destX = spritePosition.x;
+    auto destY = framebuffer.height - (spritePosition.y + /*Sprite size */ 32 ) - 1;
+
+    if(player.inBoat)
+        blitTileRectangle(framebuffer, destX, destY, global.spriteSet, BoatBack);
+    //printf("feetExtent %f %f\n", feetExtent.x, feetExtent.y);
+    renderEntity(framebuffer, player);
+    if(player.inBoat)
+        blitTileRectangle(framebuffer, destX, destY, global.spriteSet, BoatFront);
+
+}
+
 static void renderEntities(const Framebuffer &framebuffer)
 {
-    renderEntity(framebuffer, global.player);
+    renderPlayer(framebuffer, global.player);
 }
 
 static void renderMinimap(const Framebuffer &framebuffer)
@@ -403,12 +436,42 @@ static void renderAmmo(const Framebuffer &framebuffer)
     drawText(framebuffer, 0xFF00FFFF, FontTileSize, FontTileSize*2, buffer);
 }
 
+static void renderGameTime(const Framebuffer &framebuffer)
+{
+    char buffer[64];
+
+    sprintf(buffer, "%d", int(global.matchTime));
+    drawText(framebuffer, 0xFFFFFFFF, (framebuffer.width - FontTileSize*strlen(buffer))/2, 0, buffer);
+}
+static void renderPostProcess(const Framebuffer &framebuffer)
+{
+    if(!global.isPaused && !global.isGameCompleted)
+        return;
+
+    uint32_t colorMask = 0xFF808080;
+
+    auto destRow = framebuffer.pixels;
+    for(int y = 0; y < framebuffer.height; ++y, destRow += framebuffer.pitch)
+    {
+        auto dest = reinterpret_cast<uint32_t*> (destRow);
+        for(int x = 0; x < framebuffer.width; ++x, ++dest)
+        {
+            if((x ^ y) & 1)
+                *dest &= colorMask;
+        }
+    }
+}
 static void renderMessage(const Framebuffer &framebuffer)
 {
     const char *message = nullptr;
     uint32_t color = -1;
 
-    if(!global.player.isAlive())
+    if(global.isGameCompleted)
+    {
+        message = "Congratulations!\0You have escaped\0the Earth\0 \0Welcome to Hell!!!\0 \0Press R to reset\0";
+        color = 0xff00FFFF;
+    }
+    else if(!global.player.isAlive())
     {
         message = "Game Over\0Press R to reset\0";
         color = 0xff000080;
@@ -450,6 +513,7 @@ static void renderHud(const Framebuffer &framebuffer)
     renderHealth(framebuffer);
     renderBelly(framebuffer);
     renderAmmo(framebuffer);
+    renderGameTime(framebuffer);
 
     renderMessage(framebuffer);
 }
@@ -459,13 +523,14 @@ void render(const Framebuffer &framebuffer)
     renderBackground(framebuffer);
     renderEntities(framebuffer);
     renderBullets(framebuffer);
+    renderPostProcess(framebuffer);
     renderHud(framebuffer);
 }
 
 Box2 getScreenBoundingBox()
 {
     Vector2 halfExtent = pixels2Units(Vector2(ScreenWidth/2, ScreenHeight/2));
-    
+
     return Box2(-halfExtent, halfExtent);
 }
 

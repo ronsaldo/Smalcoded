@@ -1,6 +1,6 @@
-# Leng cmake build script.
+# Smalcoded cmake build script.
 cmake_minimum_required(VERSION 2.8)
-project(SmallEcoDestroyed)
+project(Smalcoded)
 
 # Check the build type
 if (CMAKE_BUILD_TYPE STREQUAL "")
@@ -18,7 +18,7 @@ endif()
 
 # Output paths.
 set(CMAKE_INSTALL_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/dist")
-set(SmallEcoDestroyed_DATA_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/dist/data")
+set(Smalcoded_DATA_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/dist/data")
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/;${CMAKE_MODULE_PATH}")
 
 # Turn warnings and use C++ 2011.
@@ -42,8 +42,8 @@ include(${CMAKE_ROOT}/Modules/CheckFunctionExists.cmake)
 include(${CMAKE_ROOT}/Modules/CheckLibraryExists.cmake)
 
 # Set output dir.
-set(EXECUTABLE_OUTPUT_PATH "${SmallEcoDestroyed_BINARY_DIR}/dist")
-set(LIBRARY_OUTPUT_PATH "${SmallEcoDestroyed_BINARY_DIR}/dist")
+set(EXECUTABLE_OUTPUT_PATH "${Smalcoded_BINARY_DIR}/dist")
+set(LIBRARY_OUTPUT_PATH "${Smalcoded_BINARY_DIR}/dist")
 
 set(LIVE_CODING_SUPPORT True)
 
@@ -51,12 +51,12 @@ set(LIVE_CODING_SUPPORT True)
 find_package(PkgConfig)
 if(ON_EMSCRIPTEN)
     # Use SDL2 port instead of SDL1
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_SDL=2 -s USE_SDL_IMAGE=2 -s SDL2_IMAGE_FORMATS='[\"png\"]' -Wno-warn-absolute-paths")
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -s USE_SDL=2 USE_SDL_IMAGE=2 -s SDL2_IMAGE_FORMATS='[\"png\"]' -Wno-warn-absolute-paths")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_SDL=2 -s USE_SDL_IMAGE=2 -s SDL2_IMAGE_FORMATS='[\"png\"]' -s USE_SDL_MIXER=2 -Wno-warn-absolute-paths")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -s USE_SDL=2 USE_SDL_IMAGE=2 -s SDL2_IMAGE_FORMATS='[\"png\"]' -s USE_SDL_MIXER=2 -Wno-warn-absolute-paths")
 
     set(SDL2_LIBRARIES)
     set(CMAKE_EXECUTABLE_SUFFIX .html)
-    set(SmallEcoDestroyed_DEP_LIBS ${SDL2_LIBRARIES} ${SmallEcoDestroyed_DEP_LIBS})
+    set(Smalcoded_DEP_LIBS ${SDL2_LIBRARIES} ${Smalcoded_DEP_LIBS})
     set(ASSET_FLAGS "--preload-file ${CMAKE_SOURCE_DIR}/assets@assets")
 
 	set(LIVE_CODING_SUPPORT False)
@@ -74,16 +74,17 @@ else()
 
     find_library(SDL2_LIBRARY NAMES SDL2-2.0 SDL2 PATHS ${SDL2_LIBRARY_PATH})
     find_library(SDL2_IMAGE_LIBRARY NAMES SDL2_image-2.0 SDL2_image PATHS ${SDL2_LIBRARY_PATH})
+	find_library(SDL2_MIXER_LIBRARY NAMES SDL2_mixer-2.0 SDL2_mixer PATHS ${SDL2_LIBRARY_PATH})
     if(WIN32)
 		find_library(SDL2_MAIN_LIBRARY NAMES SDL2main PATHS ${SDL2_LIBRARY_PATH})
     else()
 		set(SDL2_MAIN_LIBRARY "")
-		set(SmallEcoDestroyed_DEP_LIBS "dl")
+		set(Smalcoded_DEP_LIBS "dl")
     endif()
 
-    set(SmallEcoDestroyed_DEP_LIBS ${SmallEcoDestroyed_DEP_LIBS} ${SDL2_MAIN_LIBRARY} ${SDL2_LIBRARY} ${SDL2_IMAGE_LIBRARY})
+    set(Smalcoded_DEP_LIBS ${Smalcoded_DEP_LIBS} ${SDL2_MAIN_LIBRARY} ${SDL2_LIBRARY} ${SDL2_IMAGE_LIBRARY} ${SDL2_MIXER_LIBRARY})
     if(MINGW)
-        set(SmallEcoDestroyed_DEP_LIBS mingw32 ${SmallEcoDestroyed_DEP_LIBS})
+        set(Smalcoded_DEP_LIBS mingw32 ${Smalcoded_DEP_LIBS})
 	add_definitions(-D__NO_INLINE__)
     endif()
 

@@ -78,10 +78,7 @@ struct Entity
         return int(health + 0.5f);
     }
 
-    void receiveDamage(float damage)
-    {
-        health = std::max(health - damage, 0.0f);
-    }
+    void receiveDamage(float damage);
 
     bool isAlive()
     {
@@ -108,6 +105,9 @@ struct PlayerState : Entity
     int bullets;
     int demolitionBullets;
     bool withDemolitionBullets;
+    bool hasIceProtection;
+    bool hasHolyProtection;
+    bool inBoat;
 
     int roundedBelly() const
     {
@@ -153,6 +153,7 @@ enum Flag
     Demolition = 1<<1,
     FiredByEnemy = 1<<2,
     FiredByTurret = 1<<3,
+    HighBullet = 1<<4,
 };
 };
 
@@ -192,11 +193,23 @@ struct BulletState
         return flags & BulletFlags::Demolition;
     }
 
+    bool isHighBullet() const
+    {
+        return flags & BulletFlags::HighBullet;
+    }
+
     void gotTarget()
     {
         // Mark as dead.
         timeToLive = -1;
     }
+};
+
+enum class DecayStage
+{
+    Normal = 0,
+    Dying,
+    Dead
 };
 
 struct GlobalState
@@ -211,8 +224,10 @@ struct GlobalState
     // Global states
     bool isInitialized;
     bool isPaused;
+    bool isGameCompleted;
     float currentTime;
     float matchTime;
+    DecayStage decayStage;
     ControllerState oldControllerState;
     ControllerState controllerState;
     Random random;
@@ -226,6 +241,11 @@ struct GlobalState
     int deadBullets[MaxNumberOfBullets];
     int numberOfAliveBullets;
     int aliveBullets[MaxNumberOfBullets];
+
+    // Sound effects
+    bool shotWasFired;
+    bool itemWasPicked;
+    bool somethingExploded;
 
     bool isButtonPressed(int button) const
     {

@@ -22,6 +22,8 @@ static struct TileColors
         setColor(TileType::Earth,           0xff804000);
         setColor(TileType::Rock,            0xff404040);
         setColor(TileType::Forest,          0xff008000);
+        setColor(TileType::DevilStone,      0xff000000);
+        setColor(TileType::HolyBarrier,     0xffffffff);
     }
 
     void setColor(TileType type, uint32_t rgbaColor)
@@ -33,19 +35,19 @@ static struct TileColors
 } tileColorsClass;
 
 static float TileOccupantProbabilities[(int)TileOccupant::Count] = {
-    /* None */ 200,
+    /* None */ 40000,
 
     // Nasty stuff
-    /*Turret*/ 1,
+    /*Turret*/ 100,
 
     // Items
-    /* Apple */ 1,
-    /* Meat */ 1,
-    /* MilitaryMeal*/ 1,
-    /* Medkit */ 1,
-    /* Bullet */1,
-    /* TripleBullet */1,
-    /* DemolitionBullet */1,
+    /* Apple */ 200,
+    /* Meat */ 250,
+    /* MilitaryMeal*/ 50,
+    /* Medkit */ 200,
+    /* Bullet */400,
+    /* TripleBullet */50,
+    /* DemolitionBullet */10,
     /* TripleDemolitionBullet */1,
 };
 
@@ -53,17 +55,17 @@ static const uint32_t TileOccupantPermittedTileMask[(int)TileOccupant::Count] = 
     /* None */ ~0u,
 
     // Nasty stuff
-    /*Turret*/ ~0u,
+    /*Turret*/ TileTypeMask::Anywhere,
 
     // Items
     /* Apple */ TileTypeMask::Grass | TileTypeMask::Forest | TileTypeMask::Earth,
     /* Meat */ TileTypeMask::AnyGround,
-    /* MilitaryMeal*/ ~0u,
-    /* Medkit */ TileTypeMask::Grass | TileTypeMask::Forest | TileTypeMask::Earth,
-    /* Bullet */~0u,
-    /* TripleBullet */~0u,
-    /* DemolitionBullet */~0u,
-    /* TripleDemolitionBullet */~0u,
+    /* MilitaryMeal*/ TileTypeMask::Anywhere,
+    /* Medkit */ TileTypeMask::Anywhere,
+    /* Bullet */TileTypeMask::Anywhere,
+    /* TripleBullet */TileTypeMask::Anywhere,
+    /* DemolitionBullet */TileTypeMask::Anywhere,
+    /* TripleDemolitionBullet */TileTypeMask::Anywhere,
 
 };
 
@@ -99,6 +101,27 @@ static struct TileOccupantProbabilityComputer
 
 } tileOccupantProbabilityComputer;
 
+inline TileOccupant generateTileOccupant(TileType type, int row, int column)
+{
+    constexpr Box2 NoDemolitionZone = Box2(137, 47, 208, 147);
+    auto point = Vector2(column, row);
+
+    for(;;)
+    {
+        auto occupant = tileOccupantProbabilityDistribution[global.random.next32() & 0xFFFF];
+        if(!isTileTypeInSet(type, TileOccupantPermittedTileMask[int(occupant)]))
+            continue;
+
+        // No nukes in south america.
+        if((occupant == TileOccupant::DemolitionBullet || occupant == TileOccupant::TripleDemolitionBullet) && NoDemolitionZone.containsPoint(point))
+            continue;
+
+        return occupant;
+    }
+
+    return TileOccupant::None;
+}
+
 void TileMap::loadFromFile(const char *fileName)
 {
     Image image;
@@ -121,11 +144,10 @@ void TileMap::loadFromFile(const char *fileName)
             if(type == TileType::None)
                 printf("Unidentified color %08x\n", color);
             tiles[destIndex] = type;
-            auto random = tileRandom[destIndex] = global.random.next32();
+            tileRandom[destIndex] = global.random.next32();
 
-            auto tileOccupant = tileOccupantProbabilityDistribution[random&0xFFFF];
-            if(isTileTypeInSet(type, TileOccupantPermittedTileMask[int(tileOccupant)]))
-                occupants[destIndex] = tileOccupant;
+            auto tileOccupant = generateTileOccupant(type, y, x);
+            occupants[destIndex] = tileOccupant;
             occupantStates[destIndex].setDefault(tileOccupant);
         }
     }
@@ -145,7 +167,7 @@ void TileMap::postProcess()
         for(int x = 0; x < Width; ++x, position.advanceColumn())
         {
             auto &center = position.value();
-            if(!isTileTypeInSet(center, TileTypeMask::OceanWater))
+            if(!isTileTypeInSet(center, TileTypeMask::Water))
                 continue;
 
             auto topLeft = position.atDeltaWrap(-1, 1); auto top = position.atDeltaWrap(0, 1); auto topRight = position.atDeltaWrap(1, 1);

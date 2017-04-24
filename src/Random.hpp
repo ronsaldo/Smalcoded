@@ -2,6 +2,7 @@
 #define SMALL_ECO_DESTROYED_RANDOM_HPP
 
 #include <stdint.h>
+#include <stdio.h>
 
 struct Random
 {

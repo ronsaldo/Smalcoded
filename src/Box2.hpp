@@ -6,9 +6,9 @@
 class Box2
 {
 public:
-    Box2(const Vector2 &min, const Vector2 &max)
+    constexpr Box2(const Vector2 &min, const Vector2 &max)
         : min(min), max(max) {}
-    Box2(float nx=INFINITY, float ny=INFINITY, float px=-INFINITY, float py=-INFINITY)
+    constexpr Box2(float nx=INFINITY, float ny=INFINITY, float px=-INFINITY, float py=-INFINITY)
         : min(nx, ny), max(px, py) {}
 
     static Box2 fromCenterAndHalfExtent(const Vector2 &center, const Vector2 &halfExtent)
@@ -105,7 +105,7 @@ public:
             expectedOrientation != orient2D(start, end, topRight()) ||
             expectedOrientation != orient2D(start, end, topLeft());
     }
-    
+
     Vector2 min, max;
 };
 
