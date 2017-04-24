@@ -1,6 +1,9 @@
 #include "SDL.h"
 #include "SDL_image.h"
+#ifndef NO_SDL_MIXER_AVAILABLE
 #include "SDL_mixer.h"
+#endif
+
 #include "SDL_main.h"
 #include "GameInterface.hpp"
 #include "ControllerState.hpp"
@@ -130,6 +133,7 @@ void reloadGameInterface()
 
 #endif
 
+#ifndef NO_SDL_MIXER_AVAILABLE
 static const char *SoundSampleFileNames[(int)SoundSampleName::Count] = {
     nullptr,
     "assets/explo1.wav",
@@ -146,9 +150,10 @@ static const char *SoundSampleFileNames[(int)SoundSampleName::Count] = {
 };
 
 static Mix_Chunk *soundSamples[(int)SoundSampleName::Count];
-
+#endif
 static void loadSoundSamples()
 {
+#ifndef NO_SDL_MIXER_AVAILABLE
     for(int i = 0; i < (int)SoundSampleName::Count; ++i)
     {
         auto fileName = SoundSampleFileNames[i];
@@ -159,13 +164,16 @@ static void loadSoundSamples()
         if(!sample)
             fprintf(stderr, "Failed to load sample '%s': %s\n", fileName, Mix_GetError());
     }
+#endif
 }
 
 void playSoundSample(SoundSampleName name)
 {
+#ifndef NO_SDL_MIXER_AVAILABLE
     auto sample = soundSamples[int(name)];
     if(sample)
         Mix_PlayChannel(-1, sample, 0);
+#endif
 }
 
 static void onKeyEvent(const SDL_KeyboardEvent &event, bool isDown)
@@ -434,9 +442,9 @@ static void mainLoopIteration()
 
     // Accumulate the the time.
     accumulatedTime += deltaTicks * 0.001f;
-    accumulatedTime = std::min(accumulatedTime, 5*TimeStep);
+    accumulatedTime = std::min(accumulatedTime, 3*TimeStep);
     auto iterationCount = 0;
-    while(accumulatedTime >= TimeStep - 0.01f)
+    while(accumulatedTime >= TimeStep - 0.01f && iterationCount < 3)
     {
         update(TimeStep);
         accumulatedTime -= TimeStep;
@@ -468,9 +476,12 @@ int main(int argc, char* argv[])
     SDL_SetHint("SDL_HINT_NO_SIGNAL_HANDLERS", "1");
     SDL_Init(SDL_INIT_VIDEO | SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER | SDL_INIT_AUDIO);
     IMG_Init(IMG_INIT_PNG);
+
+#ifndef NO_SDL_MIXER_AVAILABLE
     Mix_Init(0);
     Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 4096);
     Mix_AllocateChannels(16);
+#endif
 
     window = SDL_CreateWindow(GAME_TITLE, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, windowWidth, windowHeight, SDL_WINDOW_SHOWN);
     renderer = SDL_CreateRenderer(window, 0, SDL_RENDERER_PRESENTVSYNC);
@@ -499,8 +510,11 @@ int main(int argc, char* argv[])
     }
 
     SDL_Quit();
+
     IMG_Quit();
+#ifndef NO_SDL_MIXER_AVAILABLE
     Mix_Quit();
+#endif
 #endif
 
     return 0;

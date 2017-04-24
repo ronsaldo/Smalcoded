@@ -5,8 +5,8 @@
 #include "ControllerState.hpp"
 #include "Framebuffer.hpp"
 
-static constexpr size_t PersistentMemorySize = 64*1024*1024;
-static constexpr size_t TransientMemorySize = 32*1024*1024;
+static constexpr size_t PersistentMemorySize = 8*1024*1024;
+static constexpr size_t TransientMemorySize = 16*1024;//32*1024*1024;
 
 struct GameInterface
 {

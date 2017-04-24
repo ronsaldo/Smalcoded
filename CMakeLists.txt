@@ -60,7 +60,7 @@ if(ON_EMSCRIPTEN)
     set(ASSET_FLAGS "--preload-file ${CMAKE_SOURCE_DIR}/assets@assets")
 
 	set(LIVE_CODING_SUPPORT False)
-
+	add_definitions(-DNO_SDL_MIXER_AVAILABLE)
 else()
     # For VisualStudio or mingw in Window
     find_path(SDL2_INCLUDE_DIR

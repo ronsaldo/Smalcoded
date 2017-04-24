@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <stdio.h>
 #include <time.h>
+#include <stdlib.h>
 
 GlobalState *globalState;
 static MemoryZone *transientMemoryZone;
@@ -736,6 +737,8 @@ static void doCheating()
 void update(float delta, const ControllerState &controllerState)
 {
     initializeGlobalState();
+
+    //printf("MemoryRequirement: %zu\n", sizeof(GlobalState));
 
     // Pause button
     if(global.isButtonPressed(ControllerButton::Start))
